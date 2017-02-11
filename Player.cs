@@ -2,14 +2,17 @@ using System.Collections.Generic;
 
 public class Player
 {
-    public List<Army> GetArmies()
+    public Player()
     {
-        return null; // TODO: Change
+        this.ArmyList = new List<Army>();
     }
+
+    private List<Army> ArmyList { get; set; }
 
     public void AddArmy(Army army, Pos pos)
     {
-        // TODO: Change
+        // create new army object
+        this.ArmyList.Add(new Army(pos, 100));
     }
 
     public void MoveArmy(Army army, Pos toPos)
