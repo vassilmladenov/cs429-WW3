@@ -18,5 +18,17 @@ public class Player
     public void MoveArmy(Army army, Pos toPos)
     {
         // TODO: Change
+        if (this.ArmyList.Contains(army))
+        {
+            army.Position = toPos;
+        }
+    }
+
+    public void RemoveArmy(Army army)
+    {
+        if (this.ArmyList.Contains(army))
+        {
+            this.ArmyList.Remove(army);
+        }
     }
 }
