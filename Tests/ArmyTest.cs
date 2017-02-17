@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class ArmyTest
 {
     [TestMethod]
-    public void Construction()
+    public void TestConstruction()
     {
         var a = new Army(new Pos(0, 3), 100);
         Assert.AreEqual(100, a.Health);
