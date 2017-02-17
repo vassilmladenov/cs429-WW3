@@ -7,7 +7,7 @@ public class Player
         this.ArmyList = new List<Army>();
     }
 
-    private List<Army> ArmyList { get; set; }
+    public List<Army> ArmyList { get; private set; }
 
     public void AddArmy(Army army, Pos pos)
     {
