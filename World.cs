@@ -59,7 +59,7 @@ public class World
             return;
         }
 
-        City city = new City(cityData[NAME_IDX], (int)float.Parse(cityData[POP_IDX]));
+        var city = new City(cityData[NAME_IDX], (int)float.Parse(cityData[POP_IDX]));
         float latitude = float.Parse(cityData[LAT_IDX]);
         float longitude = float.Parse(cityData[LONG_IDX]);
 
