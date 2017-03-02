@@ -1,5 +1,10 @@
+using System;
+
 public class Army
 {
+    public const int DefaultMoveRange = 20;
+    public const int DefaultRange = 50;
+
     private readonly int ammoToUpgradeRange = 50;
     private readonly int maxFoodCarried = 50;
     private readonly int maxHealth = 100;
@@ -8,13 +13,17 @@ public class Army
 
     public Army(Pos position, int health)
     {
-        this.Position = position;
-        this.Health = health;
+        Position = position;
+        Health = health;
+        Range = DefaultRange;
+        MoveRange = DefaultMoveRange;
     }
 
     public Pos Position { get; set; }
 
     public int Range { get; private set; }
+
+    public int MoveRange { get; private set; }
 
     public int Health { get; set; }
 
@@ -23,7 +32,7 @@ public class Army
         // take from food stores to feed army/increase health
         int healthNeeded = this.maxHealth - this.Health;
 
-         // increase health as much as possible
+        // increase health as much as possible
         if (this.food < healthNeeded)
         {
             this.Health = this.food;
@@ -62,7 +71,7 @@ public class Army
             }
             else
             {
-            this.food = harvested - healthNeeded;
+                this.food = harvested - healthNeeded;
             }
         }
 
@@ -75,5 +84,10 @@ public class Army
             this.Range++;
             this.weapons -= this.ammoToUpgradeRange;
         }
+    }
+
+    public int DistanceTo(Pos target)
+    {
+        return Math.Abs(target.X - Position.X) + Math.Abs(target.Y - Position.Y);
     }
 }

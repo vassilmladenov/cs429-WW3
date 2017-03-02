@@ -15,8 +15,8 @@ public class Province
 
     public Province()
     {
-        this.City = null;
-        this.Owner = null;
+        City = null;
+        Owner = null;
         this.resourceGenerationRates = new int[Enum.GetNames(typeof(ResourceType)).Length];
         this.resources = new ResourceBag();
 
@@ -28,8 +28,8 @@ public class Province
     public Province(City city, Player owner)
         : base()
     {
-        this.City = city;
-        this.Owner = owner;
+        City = city;
+        Owner = owner;
 
         if (city != null)
         {

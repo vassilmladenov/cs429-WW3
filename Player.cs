@@ -4,31 +4,43 @@ public class Player
 {
     public Player()
     {
-        this.ArmyList = new List<Army>();
+        ArmyList = new List<Army>();
     }
 
     public List<Army> ArmyList { get; private set; }
 
-    public void AddArmy(Army army, Pos pos)
+    public void AddArmy(Army army)
     {
         // create new army object
-        this.ArmyList.Add(new Army(pos, 100));
+        ArmyList.Add(army);
     }
 
-    public void MoveArmy(Army army, Pos toPos)
+    public bool CanMoveArmy(int armyId, Pos toPos)
     {
-        // TODO: Change
-        if (this.ArmyList.Contains(army))
+        if (armyId >= ArmyList.Count)
         {
-            army.Position = toPos;
+            return false;
         }
+
+        Army army = ArmyList[armyId];
+        if (army.DistanceTo(toPos) > army.MoveRange)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public void MoveArmy(int armyId, Pos toPos)
+    {
+        ArmyList[armyId].Position = toPos;
     }
 
     public void RemoveArmy(Army army)
     {
-        if (this.ArmyList.Contains(army))
+        if (ArmyList.Contains(army))
         {
-            this.ArmyList.Remove(army);
+            ArmyList.Remove(army);
         }
     }
 }
