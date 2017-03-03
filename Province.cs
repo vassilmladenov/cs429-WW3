@@ -26,7 +26,7 @@ public class Province
     }
 
     public Province(City city, Player owner)
-        : base()
+        : this()
     {
         City = city;
         Owner = owner;
