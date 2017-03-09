@@ -7,11 +7,11 @@ public class GameTest
     public void TestPlayerRotation()
     {
         Game test = new Game();
-        Player one = test.GetCurrentPlayer();
+        Player one = test.CurrentPlayer;
         test.AdvancePlayer();
-        Player two = test.GetCurrentPlayer();
+        Player two = test.CurrentPlayer;
         test.AdvancePlayer();
-        Player three = test.GetCurrentPlayer();
+        Player three = test.CurrentPlayer;
         Assert.AreNotSame(one, two);
         Assert.AreSame(one, three);
     }
