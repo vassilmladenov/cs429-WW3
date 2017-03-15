@@ -1,4 +1,5 @@
 using System;
+using OpenTK.Graphics.OpenGL;
 
 public class Army
 {
@@ -89,5 +90,18 @@ public class Army
     public int DistanceTo(Pos target)
     {
         return Math.Abs(target.X - Position.X) + Math.Abs(target.Y - Position.Y);
+    }
+
+    public void Render()
+    {
+        GL.MatrixMode(MatrixMode.Modelview);
+        GL.PushMatrix();
+        GL.Translate(Position.X, Position.Y, 0);
+        GL.Begin(PrimitiveType.Triangles);
+        GL.Vertex2(0.7f, 0.3f);
+        GL.Vertex2(0.5f, 0.7f);
+        GL.Vertex2(0.3f, 0.3f);
+        GL.End();
+        GL.PopMatrix();
     }
 }

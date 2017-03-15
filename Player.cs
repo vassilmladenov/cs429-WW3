@@ -2,12 +2,15 @@ using System.Collections.Generic;
 
 public class Player
 {
-    public Player()
+    public Player(Color c)
     {
         ArmyList = new List<Army>();
+        Color = c;
     }
 
     public List<Army> ArmyList { get; private set; }
+
+    public Color Color { get; set; }
 
     public void AddArmy(Army army)
     {
@@ -58,6 +61,15 @@ public class Player
         if (ArmyList.Contains(army))
         {
             ArmyList.Remove(army);
+        }
+    }
+
+    public void RenderArmies()
+    {
+        foreach (var army in ArmyList)
+        {
+            Color.Use();
+            army.Render();
         }
     }
 }

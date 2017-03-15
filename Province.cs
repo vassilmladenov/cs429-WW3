@@ -1,4 +1,5 @@
 using System;
+using OpenTK.Graphics.OpenGL;
 
 public class Province
 {
@@ -72,5 +73,15 @@ public class Province
         this.resources.Use(resourceType, ret);
 
         return ret;
+    }
+
+    public void Render()
+    {
+        Color c = Owner?.Color ?? new Color(0.5f, 0.5f, 0.5f);
+
+        c.Use();
+        GL.Rect(0.0f, 0.0f, 1.0f, 1.0f);
+
+        City?.Render();
     }
 }

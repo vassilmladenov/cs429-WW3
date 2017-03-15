@@ -15,7 +15,7 @@ public class ProvinceTest
     [TestMethod]
     public void TestProvinceWithCityGeneratesWeapons()
     {
-        Province p = new Province(new City("Urbana", 5), new Player());
+        Province p = new Province(new City("Urbana", 5), new Player(new Color(1.0f, 0.0f, 0.0f)));
         p.Tick();
         Assert.AreEqual(5, p.Gather(ResourceType.Weapons));
     }

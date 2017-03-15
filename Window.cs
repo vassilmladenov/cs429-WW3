@@ -6,9 +6,12 @@ using OpenTK.Input;
 
 public class Window : GameWindow
 {
-    public Window(int width, int height)
+    private Game game;
+
+    public Window(int width, int height, Game game)
         : base(width, height, GraphicsMode.Default, "WW3")
     {
+        this.game = game;
         VSync = VSyncMode.On;
     }
 
@@ -17,7 +20,7 @@ public class Window : GameWindow
         base.OnLoad(e);
 
         // GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
-        GL.Enable(EnableCap.DepthTest);
+        // GL.Enable(EnableCap.DepthTest);
     }
 
     protected override void OnResize(EventArgs e)
@@ -48,11 +51,14 @@ public class Window : GameWindow
 
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        Matrix4 modelview = Matrix4.LookAt(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY);
-        GL.MatrixMode(MatrixMode.Modelview);
-        GL.LoadMatrix(ref modelview);
+        GL.MatrixMode(MatrixMode.Projection);
+        GL.LoadIdentity();
+        GL.Ortho(0.0, World.WIDTH, 0.0, World.HEIGHT, 1.0, -1.0);
 
-        GL.Begin(PrimitiveType.Triangles);
+        game.Render();
+        /*
+        GL.MatrixMode(MatrixMode.Modelview);
+        GL.Begin(PrimitiveType.Quads);
 
         // draw logic goes here
         GL.Color3(1.0f, 1.0f, 0.0f);
@@ -60,10 +66,11 @@ public class Window : GameWindow
         GL.Color3(1.0f, 0.0f, 0.0f);
         GL.Vertex3(1.0f, -1.0f, 4.0f);
         GL.Color3(0.2f, 0.9f, 1.0f);
-        GL.Vertex3(0.0f, 1.0f, 4.0f);
+        GL.Vertex3(1.0f, 1.0f, 4.0f);
+        GL.Vertex3(-1.0f, 1.0f, 4.0f);
 
         GL.End();
-
+        */
         SwapBuffers();
     }
 }

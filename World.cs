@@ -1,11 +1,12 @@
 using System;
 using System.IO;
+using OpenTK.Graphics.OpenGL;
 
 public class World
 {
-    public const int WIDTH = 512;
+    public const int WIDTH = 100;
 
-    public const int HEIGHT = 256;
+    public const int HEIGHT = 50;
 
     public const float MAXLAT = 90f;
 
@@ -43,6 +44,37 @@ public class World
     public Province GetProvinceAt(Pos pos)
     {
         return provinceGrid[pos.X, pos.Y];
+    }
+
+    public void Render()
+    {
+        for (int x = 0; x < WIDTH; x++)
+        {
+            for (int y = 0; y < HEIGHT; y++)
+            {
+                GL.MatrixMode(MatrixMode.Modelview);
+                GL.PushMatrix();
+                GL.Translate(x, y, 0);
+                provinceGrid[x, y].Render();
+                GL.PopMatrix();
+            }
+        }
+
+        GL.Begin(PrimitiveType.Lines);
+        Color.BLACK.Use();
+        for (int x = 0; x < WIDTH; x++)
+        {
+            GL.Vertex2(x, 0);
+            GL.Vertex2(x, HEIGHT);
+        }
+
+        for (int y = 0; y < HEIGHT; y++)
+        {
+            GL.Vertex2(0, y);
+            GL.Vertex2(WIDTH, y);
+        }
+
+        GL.End();
     }
 
     private void AddCity(string cityString)

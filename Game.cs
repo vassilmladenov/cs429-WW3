@@ -14,8 +14,8 @@ public class Game
 
         // set up players list. for now, just add two players.
         players = new List<Player>();
-        players.Add(new Player());
-        players.Add(new Player());
+        players.Add(new Player(new Color(1.0f, 0.0f, 0.0f)));
+        players.Add(new Player(new Color(0.0f, 0.0f, 1.0f)));
         players[0].AddArmy(new Army(new Pos(0, 0), 10));
         players[1].AddArmy(new Army(new Pos(1, 1), 10));
         CurrentPlayerIndex = 0;
@@ -72,6 +72,15 @@ public class Game
             }
 
             Console.WriteLine(string.Empty);
+        }
+    }
+
+    public void Render()
+    {
+        world.Render();
+        foreach (var player in players)
+        {
+            player.RenderArmies();
         }
     }
 }
