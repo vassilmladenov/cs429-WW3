@@ -2,15 +2,21 @@ using System.Collections.Generic;
 
 public class Player
 {
+    private Dictionary<Army, Pos?> originals;
+
     public Player(Color c)
     {
         ArmyList = new List<Army>();
+        originals = new Dictionary<Army, Pos?>();
         Color = c;
+        Resources = new ResourceBag();
     }
 
     public List<Army> ArmyList { get; private set; }
 
     public Color Color { get; set; }
+
+    public ResourceBag Resources { get; private set; }
 
     public void AddArmy(Army army)
     {
@@ -18,32 +24,63 @@ public class Player
         ArmyList.Add(army);
     }
 
-    public bool CanMoveArmy(int armyId, Pos toPos)
+    public Army GetArmy(int id)
     {
-        if (armyId >= ArmyList.Count)
+        if (ArmyExists(id))
         {
-            return false;
+            return ArmyList[id];
         }
 
-        Army army = ArmyList[armyId];
-        if (army.DistanceTo(toPos) > army.MoveRange)
-        {
-            return false;
-        }
-
-        return true;
+        return null;
     }
 
-    public bool ArmyExists(int armyId)
+    public Army GetArmyAt(Pos position)
     {
-        if (armyId >= ArmyList.Count)
+        foreach (Army army in ArmyList)
+        {
+            if (army.Position.Equals(position))
+            {
+                return army;
+            }
+        }
+
+        return null;
+    }
+
+    public bool HasArmyActed(int id)
+    {
+        var army = GetArmy(id);
+        if (army == null)
         {
             return false;
         }
-        else
+
+        return originals.ContainsKey(army) || army.Moved;
+    }
+
+    public void ArmyActed(int id)
+    {
+        var army = GetArmy(id);
+        if (army != null)
         {
-            return true;
+            army.Moved = true;
         }
+    }
+
+    public bool ArmyExists(int id)
+    {
+        return id >= 0 && id < ArmyList.Count;
+    }
+
+    public bool FeedArmy(int armyId, int foodAmount)
+    {
+        if (!Resources.Use(ResourceType.Food, foodAmount) || armyId >= ArmyList.Count)
+        {
+            return false;
+        }
+
+        ArmyList[armyId].FeedArmy(foodAmount);
+        return true;
     }
 
     public Pos ArmyPosition(int armyId)
@@ -51,9 +88,45 @@ public class Player
         return ArmyList[armyId].Position;
     }
 
+    public bool CanMoveArmy(int armyId, Pos toPos)
+    {
+        if (!ArmyExists(armyId))
+        {
+            return false;
+        }
+
+        var army = GetArmy(armyId);
+        Pos originalPosition = UnmovedPosition(army);
+        Pos startingPosition = army.Position;
+        army.Position = originalPosition;
+        var result = army.CanMoveTo(toPos);
+        army.Position = startingPosition;
+        return result;
+    }
+
+    public void UndoMove(int armyId)
+    {
+        var army = GetArmy(armyId);
+        if (army != null)
+        {
+            army.Position = UnmovedPosition(army);
+        }
+    }
+
+    public void CommitMoves()
+    {
+        originals.Clear();
+    }
+
     public void MoveArmy(int armyId, Pos toPos)
     {
-        ArmyList[armyId].Position = toPos;
+        var army = GetArmy(armyId);
+        if (!originals.ContainsKey(army))
+        {
+            originals.Add(army, army.Position);
+        }
+
+        army.Position = toPos;
     }
 
     public void RemoveArmy(Army army)
@@ -64,12 +137,23 @@ public class Player
         }
     }
 
-    public void RenderArmies()
+    public string ResourcesString()
+    {
+        return Resources.ToString();
+    }
+
+    public void Tick()
     {
         foreach (var army in ArmyList)
         {
-            Color.Use();
-            army.Render();
+            army.Tick();
         }
+    }
+
+    private Pos UnmovedPosition(Army army)
+    {
+        Pos? storedPosition;
+        originals.TryGetValue(army, out storedPosition);
+        return storedPosition.HasValue ? storedPosition.Value : army.Position;
     }
 }

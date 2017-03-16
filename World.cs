@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using OpenTK.Graphics.OpenGL;
 
 public class World
 {
@@ -46,35 +44,15 @@ public class World
         return provinceGrid[pos.X, pos.Y];
     }
 
-    public void Render()
+    public void Tick()
     {
-        for (int x = 0; x < WIDTH; x++)
+        for (int i = 0; i < WIDTH; ++i)
         {
-            for (int y = 0; y < HEIGHT; y++)
+            for (int j = 0; j < HEIGHT; ++j)
             {
-                GL.MatrixMode(MatrixMode.Modelview);
-                GL.PushMatrix();
-                GL.Translate(x, y, 0);
-                provinceGrid[x, y].Render();
-                GL.PopMatrix();
+                provinceGrid[i, j].Tick();
             }
         }
-
-        GL.Begin(PrimitiveType.Lines);
-        Color.BLACK.Use();
-        for (int x = 0; x < WIDTH; x++)
-        {
-            GL.Vertex2(x, 0);
-            GL.Vertex2(x, HEIGHT);
-        }
-
-        for (int y = 0; y < HEIGHT; y++)
-        {
-            GL.Vertex2(0, y);
-            GL.Vertex2(WIDTH, y);
-        }
-
-        GL.End();
     }
 
     private void AddCity(string cityString)

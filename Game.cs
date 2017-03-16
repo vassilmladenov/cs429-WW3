@@ -3,45 +3,46 @@ using System.Collections.Generic;
 
 public class Game
 {
-    private readonly World world;
-
-    private List<Player> players;
-
     public Game()
     {
         // initialize World
-        world = new World("maps.csv");
+        World = new World("maps.csv");
 
         // set up players list. for now, just add two players.
-        players = new List<Player>();
-        players.Add(new Player(new Color(1.0f, 0.0f, 0.0f)));
-        players.Add(new Player(new Color(0.0f, 0.0f, 1.0f)));
-        players[0].AddArmy(new Army(new Pos(0, 0), 10));
-        players[1].AddArmy(new Army(new Pos(1, 1), 10));
+        Players = new List<Player>();
+        Players.Add(new Player(new Color(1.0f, 0.0f, 0.0f)));
+        Players.Add(new Player(new Color(0.0f, 0.0f, 1.0f)));
+        Players[0].AddArmy(new Army(new Pos(0, 0), 10));
+        Players[1].AddArmy(new Army(new Pos(1, 1), 10));
         CurrentPlayerIndex = 0;
     }
+
+    public World World { get; private set; }
+
+    public List<Player> Players { get; private set; }
 
     public Player CurrentPlayer
     {
         get
         {
-            return players[CurrentPlayerIndex];
+            return Players[CurrentPlayerIndex];
         }
     }
 
     public int CurrentPlayerIndex { get; private set; }
 
-    public World World
-    {
-        get
-        {
-            return world;
-        }
-    }
-
     public void AdvancePlayer()
     {
-        CurrentPlayerIndex = (CurrentPlayerIndex + 1) % players.Count;
+        CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
+    }
+
+    public void Tick()
+    {
+        World.Tick();
+        foreach (var player in Players)
+        {
+            player.Tick();
+        }
     }
 
     public void Print()
@@ -50,9 +51,9 @@ public class Game
         {
             for (int y = 0; y < World.HEIGHT; y++)
             {
-                Province p = world.GetProvinceAt(new Pos(x, y));
+                Province p = World.GetProvinceAt(new Pos(x, y));
                 bool printed = false;
-                foreach (var player in players)
+                foreach (var player in Players)
                 {
                     var armies = player.ArmyList;
                     for (int j = 0; j < armies.Count; ++j)
@@ -72,15 +73,6 @@ public class Game
             }
 
             Console.WriteLine(string.Empty);
-        }
-    }
-
-    public void Render()
-    {
-        world.Render();
-        foreach (var player in players)
-        {
-            player.RenderArmies();
         }
     }
 }

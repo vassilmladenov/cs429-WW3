@@ -15,11 +15,74 @@ public class Window : GameWindow
         VSync = VSyncMode.On;
     }
 
+    public void Render(Army army)
+    {
+        GL.MatrixMode(MatrixMode.Modelview);
+        GL.PushMatrix();
+        GL.Translate(army.Position.X, army.Position.Y, 0);
+        GL.Begin(PrimitiveType.Triangles);
+        GL.Vertex2(0.7f, 0.3f);
+        GL.Vertex2(0.5f, 0.7f);
+        GL.Vertex2(0.3f, 0.3f);
+        GL.End();
+        GL.PopMatrix();
+    }
+
+    public void Render(City city)
+    {
+        Color.GREEN.Use();
+        float border = (1.0f - City.SIZE) / 2;
+        GL.Rect(border, border, 1.0f - border, 1.0f - border);
+    }
+
+    public void Render(Province province)
+    {
+        Color c = province.Owner?.Color ?? new Color(0.5f, 0.5f, 0.5f);
+
+        c.Use();
+        GL.Rect(0.0f, 0.0f, 1.0f, 1.0f);
+
+        if (province.City != null)
+        {
+            Render(province.City);
+        }
+    }
+
+    public void Render(World world)
+    {
+        for (int x = 0; x < World.WIDTH; x++)
+        {
+            for (int y = 0; y < World.HEIGHT; y++)
+            {
+                GL.MatrixMode(MatrixMode.Modelview);
+                GL.PushMatrix();
+                GL.Translate(x, y, 0);
+                Render(world.GetProvinceAt(new Pos(x, y)));
+                GL.PopMatrix();
+            }
+        }
+
+        GL.Begin(PrimitiveType.Lines);
+        Color.BLACK.Use();
+        for (int x = 0; x < World.WIDTH; x++)
+        {
+            GL.Vertex2(x, 0);
+            GL.Vertex2(x, World.HEIGHT);
+        }
+
+        for (int y = 0; y < World.HEIGHT; y++)
+        {
+            GL.Vertex2(0, y);
+            GL.Vertex2(World.WIDTH, y);
+        }
+
+        GL.End();
+    }
+
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
 
-        // GL.ClearColor(0.1f, 0.2f, 0.5f, 0.0f);
         // GL.Enable(EnableCap.DepthTest);
     }
 
@@ -29,9 +92,9 @@ public class Window : GameWindow
 
         GL.Viewport(ClientRectangle.X, ClientRectangle.Y, ClientRectangle.Width, ClientRectangle.Height);
 
-        Matrix4 projection = Matrix4.CreatePerspectiveFieldOfView((float)Math.PI / 4, Width / (float)Height, 1.0f, 64.0f);
         GL.MatrixMode(MatrixMode.Projection);
-        GL.LoadMatrix(ref projection);
+        GL.LoadIdentity();
+        GL.Ortho(0.0, World.WIDTH, 0.0, World.HEIGHT, 1.0, -1.0);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs e)
@@ -51,26 +114,17 @@ public class Window : GameWindow
 
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        GL.MatrixMode(MatrixMode.Projection);
-        GL.LoadIdentity();
-        GL.Ortho(0.0, World.WIDTH, 0.0, World.HEIGHT, 1.0, -1.0);
+        World world = game.World;
+        Render(world);
+        foreach (var player in game.Players)
+        {
+            player.Color.Use();
+            foreach (var army in player.ArmyList)
+            {
+                Render(army);
+            }
+        }
 
-        game.Render();
-        /*
-        GL.MatrixMode(MatrixMode.Modelview);
-        GL.Begin(PrimitiveType.Quads);
-
-        // draw logic goes here
-        GL.Color3(1.0f, 1.0f, 0.0f);
-        GL.Vertex3(-1.0f, -1.0f, 4.0f);
-        GL.Color3(1.0f, 0.0f, 0.0f);
-        GL.Vertex3(1.0f, -1.0f, 4.0f);
-        GL.Color3(0.2f, 0.9f, 1.0f);
-        GL.Vertex3(1.0f, 1.0f, 4.0f);
-        GL.Vertex3(-1.0f, 1.0f, 4.0f);
-
-        GL.End();
-        */
         SwapBuffers();
     }
 }
