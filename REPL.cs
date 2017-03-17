@@ -21,8 +21,8 @@ public class REPL
 
     public void HelpCommand()
     {
-        Console.WriteLine("Help => Prints this help message");
-        Console.WriteLine("End => Ends the current player's turn, advancing to the next player");
+        Console.WriteLine("help => Prints this help message");
+        Console.WriteLine("end => Ends the current player's turn, advancing to the next player");
         Console.WriteLine("mv ArmyId TargetX,TargetY => Moves the army ArmyId owned by the player to TargetX,TargetY iff the move is legal");
         Console.WriteLine("capture ArmyId Changes territory under armyId's control to the current player");
         Console.WriteLine("print => Prints the current state of the world to the terminal");
