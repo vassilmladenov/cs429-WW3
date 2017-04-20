@@ -96,8 +96,8 @@ public class Game
     public static Game DefaultGame()
     {
         var result = new Game();
-        result.Players.Add(new Player(result.Manager, new Color(0, 0, 0)));
-        result.Players.Add(new Player(result.Manager, new Color(1, 1, 1)));
+        result.Players.Add(new Player(result.Manager, Color.RED));
+        result.Players.Add(new Player(result.Manager, Color.BLUE));
         result.Players[0].AddArmy(new Army(100), new Pos(0, 0));
         result.Players[1].AddArmy(new Army(100), new Pos(1, 1));
         return result;

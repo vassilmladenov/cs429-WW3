@@ -1,4 +1,6 @@
 using System;
+using System.Drawing;
+using System.Drawing.Imaging;
 using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL;
@@ -10,6 +12,15 @@ public class Window : GameWindow
     public static readonly Color BACKGROUND = new Color(0.5f, 0.5f, 0.5f);
     public static readonly Color HUDBACKGROUND = new Color(0.09375f, 0.27f, 0.4f);
     public static readonly int BORDER = 2;
+
+    private static string fontBitmapFilename = "font.bmp";
+    private static int glyphsPerLine = 16;
+
+    private static int glyphWidth = 11;
+    private static int glyphHeight = 22;
+
+    private static int charXSpacing = 11;
+
     private Game game;
     private int playerID;
     private Army army;
@@ -19,10 +30,12 @@ public class Window : GameWindow
     private float centerY;
     private float scale; // scale = pixels per world square
 
-    private int endTurnButtonX;
-    private int endTurnButtonY;
-    private int endTurnButtonWidth;
-    private int endTurnButtonHeight;
+    private int fontTextureID;
+    private int textureWidth;
+    private int textureHeight;
+
+    private Button endTurnButton;
+    private Button makeArmyButton;
 
     public Window(int width, int height, Game game)
         : base(width, height, GraphicsMode.Default, "WW3")
@@ -32,23 +45,80 @@ public class Window : GameWindow
         centerX = World.WIDTH / 2;
         centerY = World.HEIGHT / 2;
         VSync = VSyncMode.On;
-        endTurnButtonY = 30;
-        endTurnButtonHeight = 45;
-        endTurnButtonWidth = 150;
+        endTurnButton = new Button(750, 30, 200, 50, "End Turn", Color.RED);
+        makeArmyButton = new Button(400, 30, 150, 45, "Make Army", Color.BLUE);
+    }
+
+    public void Render(Button button)
+    {
+        button.Color.Use();
+        GL.Rect(button.X, button.Y, button.X + button.Width, button.Y + button.Height);
+        var textX = button.X + (button.Width / 2) - (button.Text.Length * glyphWidth / 2);
+        var textY = button.Y + (button.Height / 2) - (glyphHeight / 2);
+        Color.WHITE.Use();
+        DrawText(textX, textY, button.Text);
     }
 
     public void Render(Army army)
     {
+        float left = 0.25f;
+        float right = 0.75f;
+        float top = 0.75f;
+        float bottom = 0.25f;
+
         var pos = game.Manager.ArmyPosition(army);
         GL.MatrixMode(MatrixMode.Modelview);
         GL.PushMatrix();
         GL.Translate(pos.X, pos.Y, 0);
+        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
         GL.Begin(PrimitiveType.Triangles);
-        GL.Vertex2(0.7f, 0.3f);
-        GL.Vertex2(0.5f, 0.7f);
-        GL.Vertex2(0.3f, 0.3f);
+        GL.Vertex2(right, bottom);
+        GL.Vertex2(0.5f, top);
+        GL.Vertex2(left, bottom);
         GL.End();
+        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+        GL.LineWidth(2.0f);
+        Color.BLACK.Use();
+        GL.Begin(PrimitiveType.Triangles);
+        GL.Vertex2(right, bottom);
+        GL.Vertex2(0.5f, top);
+        GL.Vertex2(left, bottom);
+        GL.End();
+        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+        GL.LineWidth(1.0f);
         GL.PopMatrix();
+    }
+
+    public void DrawText(int x, int y, string text)
+    {
+        GL.Enable(EnableCap.Blend);
+        GL.Enable(EnableCap.Texture2D);
+        GL.Begin(PrimitiveType.Quads);
+
+        float u_step = (float)glyphWidth / (float)textureWidth;
+        float v_step = (float)glyphHeight / (float)textureHeight;
+
+        for (int n = 0; n < text.Length; n++)
+        {
+            char idx = text[n];
+            float u = (float)(idx % glyphsPerLine) * u_step;
+            float v = (float)(idx / glyphsPerLine) * v_step;
+
+            GL.TexCoord2(u, v + v_step);
+            GL.Vertex2(x, y);
+            GL.TexCoord2(u + u_step, v + v_step);
+            GL.Vertex2(x + glyphWidth, y);
+            GL.TexCoord2(u + u_step, v);
+            GL.Vertex2(x + glyphWidth, y + glyphHeight);
+            GL.TexCoord2(u, v);
+            GL.Vertex2(x, y + glyphHeight);
+
+            x += charXSpacing;
+        }
+
+        GL.End();
+        GL.Disable(EnableCap.Texture2D);
+        GL.Disable(EnableCap.Blend);
     }
 
     public void Render(City city)
@@ -134,13 +204,6 @@ public class Window : GameWindow
         }
     }
 
-    public void RenderEndTurn()
-    {
-        endTurnButtonX = (Width / 2) - 100;
-        Color.WHITE.Use();
-        GL.Rect(endTurnButtonX, endTurnButtonY, endTurnButtonX + endTurnButtonWidth, endTurnButtonY + endTurnButtonHeight);
-    }
-
     public void RenderHUD(World world)
     {
         // render HUD background
@@ -151,8 +214,18 @@ public class Window : GameWindow
         HUDBACKGROUND.Use();
         GL.Rect(0, 0, Width, HUDPIXELHEIGHT);
 
+        // render health bar
         RenderHealth();
-        RenderEndTurn();
+
+        // render buttons
+        Render(makeArmyButton);
+        Render(endTurnButton);
+
+        // render current player info
+        Color.WHITE.Use();
+        DrawText(0, 0, "Current Player: ");
+        game.CurrentPlayer.Color.Use();
+        DrawText("Current Player: ".Length * glyphWidth, 0, (game.CurrentPlayerIndex + 1).ToString());
 
         // render province info
         Province province = world.GetProvinceAt(pos);
@@ -173,6 +246,11 @@ public class Window : GameWindow
         int weaponsSideNum = (int)Math.Sqrt(weapons) + 1;
         float foodSize = squareSize / foodSideNum;
         float weaponSize = squareSize / weaponsSideNum;
+        if (province != null && province.City != null)
+        {
+            Color.WHITE.Use();
+            DrawText((Width / 2) + 200, 30, province.City?.Name);
+        }
 
         // food
         Color.BLACK.Use();
@@ -200,6 +278,10 @@ public class Window : GameWindow
             var y2 = squareY + ((i / weaponsSideNum) * weaponSize);
             GL.Rect(x2 + 1, y2 + 1, x2 + weaponSize - 1, y2 + weaponSize - 1);
         }
+
+        // text
+        Color.WHITE.Use();
+        DrawText(right - 350, 30, "Resources");
     }
 
     public float GetLeft()
@@ -225,11 +307,16 @@ public class Window : GameWindow
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
+        fontTextureID = LoadTexture(fontBitmapFilename);
+        GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
+        GL.BlendFunc(BlendingFactorSrc.One, BlendingFactorDest.OneMinusSrcAlpha);
+        GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
     }
 
     protected override void OnResize(EventArgs e)
     {
         base.OnResize(e);
+        endTurnButton.X = (Width / 2) - (endTurnButton.Width / 2);
     }
 
     protected override void OnUpdateFrame(FrameEventArgs e)
@@ -305,15 +392,16 @@ public class Window : GameWindow
         Player player = game.CurrentPlayer;
 
         // check if the end turn button was clicked
-        if (endTurnButtonX <= mouseX && mouseX <= (endTurnButtonX + endTurnButtonWidth) && endTurnButtonY <= mouseY && mouseY <= (endTurnButtonY + endTurnButtonHeight))
+        if (endTurnButton.IsCursorInside(mouseX, mouseY))
         {
             Console.WriteLine("Turn Ended");
             game.EndTurn();
         }
 
-        if (clickFlag == 0 && x >= 0 && x < World.WIDTH && y >= 0 && y < World.HEIGHT)
+        if (clickFlag == 0 && World.IsInBounds(new Pos(x, y)))
         {
             playerID = game.CurrentPlayerIndex;
+            var prevPos = new Pos(pos.X, pos.Y);
             pos = new Pos(x, y);
             army = game.Manager.ArmyAt(pos);
             if (army != null && player.ArmyList.Contains(army))
@@ -321,12 +409,14 @@ public class Window : GameWindow
                 Console.WriteLine("Army clicked.");
                 clickFlag = 1;
             }
-            else
+            else if (makeArmyButton.IsCursorInside(mouseX, mouseY))
             {
-                Console.WriteLine("Invalid click, not an army. Try again.");
+                pos = new Pos(prevPos.X, prevPos.Y);
+                Console.WriteLine("Army created.");
+                player.AddArmy(new Army(10), pos);
             }
         }
-        else if ((clickFlag == 1 || clickFlag == 2) && x >= 0 && x < World.WIDTH && y >= 0 && y < World.HEIGHT)
+        else if ((clickFlag == 1 || clickFlag == 2) && World.IsInBounds(new Pos(x, y)))
         {
             pos = new Pos(x, y);
             if (game.Manager.ArmyPosition(army).Equals(pos))
@@ -336,8 +426,7 @@ public class Window : GameWindow
             }
             else if (game.Manager.CanMoveTo(army, pos) == true)
             {
-                Console.WriteLine("Press 'y' now to confirm move.");
-                Console.WriteLine("Press 'u' to undo the move");
+                Console.WriteLine("Press 'y' now to confirm move or 'u' to undo the move");
                 clickFlag = 2;
             }
             else
@@ -396,6 +485,23 @@ public class Window : GameWindow
         {
             game.EndTurn();
             Console.WriteLine("Ended turn");
+        }
+    }
+
+    private int LoadTexture(string filename)
+    {
+        using (var bitmap = new System.Drawing.Bitmap(filename))
+        {
+            var texId = GL.GenTexture();
+            GL.BindTexture(TextureTarget.Texture2D, fontTextureID);
+            System.Drawing.Imaging.BitmapData data = bitmap.LockBits(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmap.Width, bitmap.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
+            bitmap.UnlockBits(data);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            textureWidth = bitmap.Width;
+            textureHeight = bitmap.Height;
+            return texId;
         }
     }
 }

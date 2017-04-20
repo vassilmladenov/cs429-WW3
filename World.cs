@@ -43,9 +43,21 @@ public class World
         }
     }
 
+    public static bool IsInBounds(Pos pos)
+    {
+        return pos.X >= 0 && pos.X < WIDTH && pos.Y >= 0 && pos.Y < HEIGHT;
+    }
+
     public Province GetProvinceAt(Pos pos)
     {
-        return provinceGrid[pos.X, pos.Y];
+        if (IsInBounds(pos))
+        {
+            return provinceGrid[pos.X, pos.Y];
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public void Tick()
@@ -91,6 +103,9 @@ public class World
 
     private void AddCity(City city, Pos pos)
     {
-        provinceGrid[pos.X, pos.Y].City = city;
+        if (provinceGrid[pos.X, pos.Y].City == null || city.Points > provinceGrid[pos.X, pos.Y].City.Points)
+        {
+            provinceGrid[pos.X, pos.Y].City = city;
+        }
     }
 }
