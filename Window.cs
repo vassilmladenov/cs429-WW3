@@ -71,19 +71,14 @@ public class Window : GameWindow
         GL.PushMatrix();
         GL.Translate(pos.X, pos.Y, 0);
         GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-        GL.Begin(PrimitiveType.Triangles);
-        GL.Vertex2(right, bottom);
-        GL.Vertex2(0.5f, top);
-        GL.Vertex2(left, bottom);
-        GL.End();
+
+        DrawArmyTriangle(left, right, bottom, top);
+
         GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
         GL.LineWidth(2.0f);
         Color.BLACK.Use();
-        GL.Begin(PrimitiveType.Triangles);
-        GL.Vertex2(right, bottom);
-        GL.Vertex2(0.5f, top);
-        GL.Vertex2(left, bottom);
-        GL.End();
+        DrawArmyTriangle(left, right, bottom, top);
+
         GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
         GL.LineWidth(1.0f);
         GL.PopMatrix();
@@ -206,6 +201,12 @@ public class Window : GameWindow
 
     public void RenderHUD(World world)
     {
+        float squareSize = 40;
+        int foodOffset = 100;
+        int gunOffset = 200;
+        int cityTextOffset = 200;
+        int resourceTextOffset = 350;
+
         // render HUD background
         GL.Viewport(0, 0, Width, HUDPIXELHEIGHT);
         GL.MatrixMode(MatrixMode.Projection);
@@ -238,9 +239,9 @@ public class Window : GameWindow
         int food = passiveFood;
         int weapons = passiveWeapons;
         var right = Width;
-        var foodX = right - 100;
-        var gunX = right - 200;
-        float squareSize = 40;
+        var foodX = right - foodOffset;
+        var gunX = right - gunOffset;
+
         var squareY = (HUDPIXELHEIGHT / 2) - (squareSize / 2);
         int foodSideNum = (int)Math.Sqrt(food) + 1;
         int weaponsSideNum = (int)Math.Sqrt(weapons) + 1;
@@ -249,7 +250,7 @@ public class Window : GameWindow
         if (province != null && province.City != null)
         {
             Color.WHITE.Use();
-            DrawText((Width / 2) + 200, 30, province.City?.Name);
+            DrawText((Width / 2) + cityTextOffset, 30, province.City?.Name);
         }
 
         // food
@@ -281,7 +282,7 @@ public class Window : GameWindow
 
         // text
         Color.WHITE.Use();
-        DrawText(right - 350, 30, "Resources");
+        DrawText(right - resourceTextOffset, 30, "Resources");
     }
 
     public float GetLeft()
@@ -373,21 +374,11 @@ public class Window : GameWindow
 
     protected override void OnMouseDown(MouseButtonEventArgs e)
     {
-        base.OnMouseDown(e);
-        var a = Mouse.GetCursorState();
         int mouseX = e.Position.X;
         int mouseY = Height - e.Position.Y - 1;
-
-        float left = GetLeft();
-        float right = GetRight();
-        float bottom = GetBottom();
-        float top = GetTop();
-
-        float worldX = left + (((float)mouseX / Width) * (right - left));
-        float worldY = bottom + (((float)(mouseY - HUDPIXELHEIGHT) / (Height - HUDPIXELHEIGHT)) * (top - bottom));
-
-        int x = (int)worldX;
-        int y = (int)worldY;
+        Tuple<int, int> clickedPosition = CalculatePosition(e);
+        int x = clickedPosition.Item1;
+        int y = clickedPosition.Item2;
         Console.WriteLine("x is: " + x + " y is: " + y);
         Player player = game.CurrentPlayer;
 
@@ -396,6 +387,7 @@ public class Window : GameWindow
         {
             Console.WriteLine("Turn Ended");
             game.EndTurn();
+            clickFlag = 0;
         }
 
         if (clickFlag == 0 && World.IsInBounds(new Pos(x, y)))
@@ -409,11 +401,19 @@ public class Window : GameWindow
                 Console.WriteLine("Army clicked.");
                 clickFlag = 1;
             }
-            else if (makeArmyButton.IsCursorInside(mouseX, mouseY))
+        }
+        else if (clickFlag == 0 && makeArmyButton.IsCursorInside(mouseX, mouseY))
+        {
+            var prevPos = new Pos(pos.X, pos.Y);
+            pos = new Pos(prevPos.X, prevPos.Y);
+            if (game.Manager.ArmyAt(pos) == null)
             {
-                pos = new Pos(prevPos.X, prevPos.Y);
                 Console.WriteLine("Army created.");
-                player.AddArmy(new Army(10), pos);
+                player.AddArmy(new Army(Army.InitialHealth), pos);
+            }
+            else
+            {
+                Console.WriteLine("Army already exists at position");
             }
         }
         else if ((clickFlag == 1 || clickFlag == 2) && World.IsInBounds(new Pos(x, y)))
@@ -438,54 +438,74 @@ public class Window : GameWindow
 
     protected override void OnKeyPress(OpenTK.KeyPressEventArgs e)
     {
-        if (e.KeyChar == 'y' && clickFlag == 2)
+        switch (e.KeyChar)
         {
-            game.Manager.MoveArmy(army, pos);
-            Console.WriteLine("Army has moved.");
-            clickFlag = 0;
-        }
+            case 'y':
+                if (clickFlag == 2)
+                {
+                    game.Manager.MoveArmy(army, pos);
+                    Console.WriteLine("Army has moved.");
+                    clickFlag = 0;
+                }
 
-        if (e.KeyChar == 'u' && clickFlag == 2)
-        {
-            Console.WriteLine("Army has been moved back to its previous position");
-            clickFlag = 0;
-        }
+                break;
+            case 'u':
+                if (clickFlag == 2)
+                {
+                    Console.WriteLine("Army has been moved back to its previous position");
+                    clickFlag = 0;
+                }
 
-        if (e.KeyChar == '+')
-        {
-            scale *= 1.1f;
+                break;
+            case '+':
+                scale *= 1.1f;
+                break;
+            case '-':
+                scale /= 1.1f;
+                break;
+            case 'w':
+                centerY += 1;
+                break;
+            case 'a':
+                centerX -= 1;
+                break;
+            case 'd':
+                centerX += 1;
+                break;
+            case 's':
+                centerY -= 1;
+                break;
         }
+    }
 
-        if (e.KeyChar == '-')
-        {
-            scale /= 1.1f;
-        }
+    private Tuple<int, int> CalculatePosition(MouseButtonEventArgs e)
+    {
+        base.OnMouseDown(e);
+        var a = Mouse.GetCursorState();
+        int mouseX = e.Position.X;
+        int mouseY = Height - e.Position.Y - 1;
 
-        if (e.KeyChar == 'w')
-        {
-            centerY += 1;
-        }
+        float left = GetLeft();
+        float right = GetRight();
+        float bottom = GetBottom();
+        float top = GetTop();
 
-        if (e.KeyChar == 'a')
-        {
-            centerX -= 1;
-        }
+        float worldX = left + (((float)mouseX / Width) * (right - left));
+        float worldY = bottom + (((float)(mouseY - HUDPIXELHEIGHT) / (Height - HUDPIXELHEIGHT)) * (top - bottom));
 
-        if (e.KeyChar == 'd')
-        {
-            centerX += 1;
-        }
+        int x = (int)worldX;
+        int y = (int)worldY;
 
-        if (e.KeyChar == 's')
-        {
-            centerY -= 1;
-        }
+        return Tuple.Create(x, y);
+    }
 
-        if (e.KeyChar == 'n')
-        {
-            game.EndTurn();
-            Console.WriteLine("Ended turn");
-        }
+    private void DrawArmyTriangle(float left, float right, float bottom, float top)
+    {
+        GL.Begin(PrimitiveType.Triangles);
+        GL.Vertex2(right, bottom);
+        GL.Vertex2(0.5f, top);
+        GL.Vertex2(left, bottom);
+        GL.End();
     }
 
     private int LoadTexture(string filename)

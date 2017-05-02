@@ -4,6 +4,7 @@ public class Army
 {
     public const int DefaultMoveRange = 20;
     public const int DefaultRange = 5;
+    public const int InitialHealth = 10;
 
     public const int MaxHealth = 100;
 

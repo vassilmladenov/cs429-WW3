@@ -50,6 +50,7 @@ public class CombatResolver
             var army = player.ArmyList[i];
             if (army.Health <= 0)
             {
+                armies.RemoveArmy(army);
                 player.ArmyList.RemoveAt(i);
                 i--;
             }
