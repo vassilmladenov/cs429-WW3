@@ -10,7 +10,7 @@ public class Window : GameWindow
 {
     public const int HUDPIXELHEIGHT = 100;
     public static readonly Color BACKGROUND = new Color(0.5f, 0.5f, 0.5f);
-    public static readonly Color HUDBACKGROUND = new Color(0.09375f, 0.27f, 0.4f);
+    public static readonly Color HUDBACKGROUND = new Color(0.1f, 0.2f, 0.3f);
     public static readonly int BORDER = 2;
 
     private static string fontBitmapFilename = "font.bmp";
@@ -22,10 +22,9 @@ public class Window : GameWindow
     private static int charXSpacing = 11;
 
     private Game game;
-    private int playerID;
-    private Army army;
+    private Army selectedArmy;
     private int clickFlag = 0; // 0: initial state, 1: army clicked, 2: Confirmation step, clicking on the same spot will decrement it
-    private Pos pos;
+    private Pos selectedPos;
     private float centerX;
     private float centerY;
     private float scale; // scale = pixels per world square
@@ -59,29 +58,53 @@ public class Window : GameWindow
         DrawText(textX, textY, button.Text);
     }
 
-    public void Render(Army army)
+    public void Render(Player player)
     {
         float left = 0.25f;
         float right = 0.75f;
         float top = 0.75f;
         float bottom = 0.25f;
 
-        var pos = game.Manager.ArmyPosition(army);
-        GL.MatrixMode(MatrixMode.Modelview);
-        GL.PushMatrix();
-        GL.Translate(pos.X, pos.Y, 0);
-        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+        foreach (var army in player.ArmyList)
+        {
+            var pos = game.Manager.ArmyPosition(army);
+            GL.MatrixMode(MatrixMode.Modelview);
+            GL.PushMatrix();
 
-        DrawArmyTriangle(left, right, bottom, top);
+            GL.Translate(pos.X, pos.Y, 0);
 
-        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-        GL.LineWidth(2.0f);
-        Color.BLACK.Use();
-        DrawArmyTriangle(left, right, bottom, top);
+            // render fill color
+            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+            player.Color.Use();
+            GL.Begin(PrimitiveType.Triangles);
+            GL.Vertex2(right, bottom);
+            GL.Vertex2(0.5f, top);
+            GL.Vertex2(left, bottom);
+            GL.End();
 
-        GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
-        GL.LineWidth(1.0f);
-        GL.PopMatrix();
+            // render outline
+            if (army == selectedArmy)
+            {
+                Color.WHITE.Use();
+            }
+            else
+            {
+                Color.BLACK.Use();
+            }
+
+            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+            GL.LineWidth(2.0f);
+            GL.Begin(PrimitiveType.Triangles);
+            GL.Vertex2(right, bottom);
+            GL.Vertex2(0.5f, top);
+            GL.Vertex2(left, bottom);
+            GL.End();
+
+            GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
+            GL.LineWidth(1.0f);
+
+            GL.PopMatrix();
+        }
     }
 
     public void DrawText(int x, int y, string text)
@@ -171,13 +194,13 @@ public class Window : GameWindow
         // render selected province
         GL.PolygonMode(MaterialFace.Front, PolygonMode.Line);
         GL.Color3(1.0, 0.5, 0.0);
-        GL.Rect(pos.X, pos.Y, pos.X + 1, pos.Y + 1);
+        GL.Rect(selectedPos.X, selectedPos.Y, selectedPos.X + 1, selectedPos.Y + 1);
         GL.PolygonMode(MaterialFace.Front, PolygonMode.Fill);
     }
 
     public void RenderHealth()
     {
-        if (army != null)
+        if (selectedArmy != null)
         {
             var x = 30;
             var y = 30;
@@ -190,7 +213,7 @@ public class Window : GameWindow
 
             var barX = 100;
             var barLength = 100;
-            var barFilled = army.Health;
+            var barFilled = selectedArmy.Health;
             GL.Rect(barX - BORDER, y - BORDER, barX + barLength + BORDER, y + size + BORDER);
             HUDBACKGROUND.Use();
             GL.Rect(barX, y, barX + barLength, y + size);
@@ -224,12 +247,38 @@ public class Window : GameWindow
 
         // render current player info
         Color.WHITE.Use();
-        DrawText(0, 0, "Current Player: ");
-        game.CurrentPlayer.Color.Use();
-        DrawText("Current Player: ".Length * glyphWidth, 0, (game.CurrentPlayerIndex + 1).ToString());
+        if (game.Finished)
+        {
+            var text = "GAME OVER    Winner: ";
+            DrawText(0, 0, text);
+            var winnerID = game.WinCondition();
+            var winner = game.Players[winnerID];
+            var winnerX = text.Length * glyphWidth;
+            Color.BLACK.Use();
+            GL.Rect(winnerX, 0, winnerX + glyphWidth, glyphHeight);
+            winner.Color.Use();
+            DrawText(winnerX, 0, (winnerID + 1).ToString());
+        }
+        else
+        {
+            var text = "Current Player: ";
+            DrawText(0, 0, text);
+
+            var playerIdX = text.Length * glyphWidth;
+            Color.BLACK.Use();
+            GL.Rect(playerIdX, 0, playerIdX + glyphWidth, glyphHeight);
+            game.CurrentPlayer.Color.Use();
+            DrawText(playerIdX, 0, (game.CurrentPlayerIndex + 1).ToString());
+        }
+
+        // render current tick
+        var currentTickText = "Current Tick: ";
+        Color.WHITE.Use();
+        DrawText(0, 75, currentTickText);
+        DrawText(currentTickText.Length * glyphWidth, 75, game.Ticks.ToString());
 
         // render province info
-        Province province = world.GetProvinceAt(pos);
+        Province province = world.GetProvinceAt(selectedPos);
 
         int passiveFood = province.PassiveResources.GetAmountOf(ResourceType.Food);
         int passiveWeapons = province.PassiveResources.GetAmountOf(ResourceType.Weapons);
@@ -351,17 +400,7 @@ public class Window : GameWindow
         Render(world);
         foreach (var player in game.Players)
         {
-            player.Color.Use();
-            foreach (var army in player.ArmyList)
-            {
-                // if an army's health is 0, they are dead. Remove the army and don't render
-                if (army.Health == 0)
-                {
-                    player.RemoveArmy(army);
-                }
-
-                Render(army);
-            }
+            Render(player);
 
             // RenderResources(player.ResourcesString())
         }
@@ -380,7 +419,6 @@ public class Window : GameWindow
         int x = clickedPosition.Item1;
         int y = clickedPosition.Item2;
         Console.WriteLine("x is: " + x + " y is: " + y);
-        Player player = game.CurrentPlayer;
 
         // check if the end turn button was clicked
         if (endTurnButton.IsCursorInside(mouseX, mouseY))
@@ -390,13 +428,13 @@ public class Window : GameWindow
             clickFlag = 0;
         }
 
+        var player = game.CurrentPlayer;
         if (clickFlag == 0 && World.IsInBounds(new Pos(x, y)))
         {
-            playerID = game.CurrentPlayerIndex;
-            var prevPos = new Pos(pos.X, pos.Y);
-            pos = new Pos(x, y);
-            army = game.Manager.ArmyAt(pos);
-            if (army != null && player.ArmyList.Contains(army))
+            var prevPos = new Pos(selectedPos.X, selectedPos.Y);
+            selectedPos = new Pos(x, y);
+            selectedArmy = game.Manager.ArmyAt(selectedPos);
+            if (selectedArmy != null && player.ArmyList.Contains(selectedArmy))
             {
                 Console.WriteLine("Army clicked.");
                 clickFlag = 1;
@@ -404,12 +442,12 @@ public class Window : GameWindow
         }
         else if (clickFlag == 0 && makeArmyButton.IsCursorInside(mouseX, mouseY))
         {
-            var prevPos = new Pos(pos.X, pos.Y);
-            pos = new Pos(prevPos.X, prevPos.Y);
-            if (game.Manager.ArmyAt(pos) == null)
+            var prevPos = new Pos(selectedPos.X, selectedPos.Y);
+            selectedPos = new Pos(prevPos.X, prevPos.Y);
+            if (game.Manager.ArmyAt(selectedPos) == null)
             {
                 Console.WriteLine("Army created.");
-                player.AddArmy(new Army(Army.InitialHealth), pos);
+                player.AddArmy(new Army(Army.InitialHealth), selectedPos);
             }
             else
             {
@@ -418,13 +456,14 @@ public class Window : GameWindow
         }
         else if ((clickFlag == 1 || clickFlag == 2) && World.IsInBounds(new Pos(x, y)))
         {
-            pos = new Pos(x, y);
-            if (game.Manager.ArmyPosition(army).Equals(pos))
+            selectedPos = new Pos(x, y);
+            if (game.Manager.ArmyPosition(selectedArmy).Equals(selectedPos))
             {
                 Console.WriteLine("Army unselected");
+                selectedArmy = null;
                 clickFlag = 0;
             }
-            else if (game.Manager.CanMoveTo(army, pos) == true)
+            else if (game.Manager.CanMoveTo(selectedArmy, selectedPos) == true)
             {
                 Console.WriteLine("Press 'y' now to confirm move or 'u' to undo the move");
                 clickFlag = 2;
@@ -443,9 +482,10 @@ public class Window : GameWindow
             case 'y':
                 if (clickFlag == 2)
                 {
-                    game.Manager.MoveArmy(army, pos);
+                    game.Manager.MoveArmy(selectedArmy, selectedPos);
                     Console.WriteLine("Army has moved.");
                     clickFlag = 0;
+                    selectedArmy = null;
                 }
 
                 break;
@@ -474,6 +514,11 @@ public class Window : GameWindow
                 break;
             case 's':
                 centerY -= 1;
+                break;
+            case 'n':
+                Console.WriteLine("Turn Ended");
+                game.EndTurn();
+                clickFlag = 0;
                 break;
         }
     }
